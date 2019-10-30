@@ -63,8 +63,9 @@ async function get_boat(id) {
 async function get_boat_loads(boat_id) {
   try {
     const key = datastore.key([BOAT, parseInt(boat_id, 10)]);
-    let boat = await datastore.get(key);
-    return boat[0].loads;
+    let boats = await datastore.get(key);
+    if (boats[0]) return boats[0].loads;
+    else return null;
   } catch (error) {
     throw error;
   }
@@ -97,6 +98,23 @@ async function delete_boat(id) {
   const boat_key = datastore.key([BOAT, parseInt(id, 10)]);
   let boats = await datastore.get(boat_key);
   if (!boats || !boats[0]) return false;
+
+  let boat = boats[0];
+  try {
+    for (let i = 0; i < boat.loads.length; i++) {
+      let load_id = boat.loads[i].id;
+      const load_key = datastore.key([LOAD, parseInt(load_id, 10)]);
+      let loads = await datastore.get(load_key);
+      let load = loads[0];
+      load.carrier = {};
+      await datastore.save({
+        "key": load_key,
+        "data": load
+      });
+    }
+  } catch (error) {
+    throw error;
+  }
 
   const slip_query = datastore.createQuery(SLIP);
   try {
@@ -150,6 +168,8 @@ async function put_load_on_boat(load_id, boat_id) {
   let boat = boats[0];
   let load = loads[0];
 
+  if (load.carrier.id) return 403;
+
   boat.loads.push({
     id: load_id
   });
@@ -184,7 +204,7 @@ async function remove_load_from_boat(load_id, boat_id) {
   if (!loads || !loads[0]) return 404;
 
   let load = loads[0];
-  // if (load.carrier.id != boat_id) return 404;
+  if (load.carrier.id != boat_id) return 404;
 
   let boat = boats[0];
   let existing_load = boat.loads.find(
@@ -225,7 +245,7 @@ router.get('/', async function (req, res) {
       boat.self = url.format({
         protocol: 'https',
         hostname: req.get('host'),
-        pathname: req.originalUrl + '/' + boat.id
+        pathname: req.baseUrl + '/' + boat.id
       });
 
       for (let i = 0; i < boat.loads.length; i++) {
@@ -283,6 +303,9 @@ router.get('/:boat_id/loads', async function (req, res) {
   try {
     let boat_id = req.params.boat_id;
     let loads = await get_boat_loads(boat_id);
+    if (loads == null) res.status(404).send({
+      "Error": "No boat with this boat_id exists"
+    });
     for (let i = 0; i < loads.length; i++) {
       let load = loads[i];
       load.self = url.format({
@@ -314,7 +337,7 @@ router.post('/', async function (req, res) {
         "self": url.format({
           protocol: 'https',
           hostname: req.get('host'),
-          pathname: req.originalUrl + '/' + key.id
+          pathname: req.baseUrl + '/' + key.id
         })
       });
     } catch (error) {
@@ -344,7 +367,7 @@ router.patch('/:boat_id', async function (req, res) {
           "self": url.format({
             protocol: 'https',
             hostname: req.get('host'),
-            pathname: req.originalUrl
+            pathname: req.baseUrl
           })
         });
       } else {
@@ -370,6 +393,11 @@ router.put('/:boat_id/loads/:load_id', async function (req, res) {
     let statusCode = await put_load_on_boat(load_id, boat_id);
     res.status(statusCode);
     switch (statusCode) {
+      case 403:
+        res.send({
+          "Error": "The specified load is already assigned to a boat"
+        });
+        break;
       case 404:
         res.send({
           "Error": "The specified boat and/or load don\u2019t exist"
@@ -393,7 +421,7 @@ router.delete('/:boat_id/loads/:load_id', async function (req, res) {
     switch (statusCode) {
       case 404:
         res.send({
-          "Error": "No boat with this boat_id is at the slip with this load_id"
+          "Error": "No boat with this boat_id carries the load with this load_id"
         });
         break;
       default:

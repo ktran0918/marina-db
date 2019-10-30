@@ -14,11 +14,11 @@ const LOAD = "Load";
 router.use(bodyParser.json());
 
 /* ------------- Begin guest Model Functions ------------- */
-async function post_load(weight, carrier, content, delivery_date) {
+async function post_load(weight, content, delivery_date) {
   var key = datastore.key(LOAD);
   const new_load = {
     "weight": weight,
-    "carrier": carrier,
+    "carrier": {},
     "content": content,
     "delivery_date": delivery_date,
   };
@@ -67,15 +67,24 @@ async function delete_load(id) {
   let loads = await datastore.get(load_key);
   if (!loads || !loads[0]) return false;
 
-  //const slip_query = datastore.createQuery(SLIP);
+  let load = loads[0];
+  if (load.carrier.id) {
+    const boat_key = datastore.key([BOAT, parseInt(load.carrier.id, 10)]);
+    let boats = await datastore.get(boat_key);
+    let boat = boats[0];
+    let new_load = boat.loads.filter(boat_load => boat_load.id != id);
+    boat.loads = new_load;
+    try {
+      await datastore.save({
+        "key": boat_key,
+        "data": boat
+      });
+    } catch (error) {
+      throw error;
+    }
+  }
+
   try {
-    // let entities = await datastore.runQuery(slip_query);
-    // let slips = entities[0];
-    // for (let i = 0; i < slips.length; i++) {
-    //   if (slips[i].current_load == id) {
-    //     await remove_load_from_slip(id, slips[i][Datastore.KEY].id);
-    //   }
-    // }
     await datastore.delete(load_key);
     return true;
   } catch (error) {
@@ -88,23 +97,22 @@ async function delete_load(id) {
 /* ------------- Begin Controller Functions ------------- */
 router.post('/', async function (req, res) {
   let weight = req.body.weight;
-  let carrier = req.body.carrier;
   let content = req.body.content;
   let delivery_date = req.body.delivery_date;
 
-  if (weight && carrier && content && delivery_date) {
+  if (weight && content && delivery_date) {
     try {
-      let key = await post_load(weight, carrier, content, delivery_date);
+      let key = await post_load(weight, content, delivery_date);
       res.status(201).send({
         "id": key.id,
         "weight": weight,
-        "carrier": carrier,
+        "carrier": {},
         "content": content,
         "delivery_date": delivery_date,
         "self": url.format({
           protocol: 'https',
           hostname: req.get('host'),
-          pathname: req.originalUrl + '/' + key.id
+          pathname: req.baseUrl + '/' + key.id
         })
       });
     } catch (error) {
@@ -126,7 +134,7 @@ router.get('/:load_id', async function (req, res) {
       load.self = url.format({
         protocol: 'https',
         hostname: req.get('host'),
-        pathname: req.originalUrl
+        pathname: req.baseUrl + '/' + load_id
       });
 
       if (Object.keys(load.carrier).length > 0) {
@@ -159,7 +167,7 @@ router.get('/', async function (req, res) {
       load.self = url.format({
         protocol: 'https',
         hostname: req.get('host'),
-        pathname: req.originalUrl + '/' + load.id
+        pathname: req.baseUrl + '/' + load.id
       });
 
       if (Object.keys(load.carrier).length > 0) {
