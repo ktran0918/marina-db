@@ -15,8 +15,8 @@ None
 #### Request Attributes
 | Name | Type | Description | Constraint | Required?
 |--|--|--|--|--
-| name | String | Name of the  boat | Name must only contain alphanumeric characters, spaces, and dashes. It must start with an alphanumeric character. | Yes
-| type | String | Type of the boat | Type must only contain alphanumeric characters, spaces, and dashes. It must start with an alphanumeric character. | Yes
+| name | String | Name of the  boat | Name must only contain alphanumeric characters, spaces, and dashes. It must start with an alphanumeric character. Additionally, it must be 20 characters long or less. | Yes
+| type | String | Type of the boat | Type must only contain alphanumeric characters, spaces, and dashes. It must start with an alphanumeric character. Additionally, it must be 20 characters long or less. | Yes
 | length | Integer | Length of the boat | Length must be between 10 and 1000 feet. | Yes
 
 #### Request Body Example
@@ -127,8 +127,8 @@ Failure - 406 Not Acceptable
 #### Request Attributes
 | Name | Type | Description | Constraint | Required?
 |--|--|--|--|--
-| name | String | Name of the  boat | Name must only contain alphanumeric characters, spaces, and dashes. It must start with an alphanumeric character. | Yes*
-| type | String | Type of the boat | Type must only contain alphanumeric characters, spaces, and dashes. It must start with an alphanumeric character. | Yes*
+| name | String | Name of the  boat | Name must only contain alphanumeric characters, spaces, and dashes. It must start with an alphanumeric character. Additionally, it must be 20 characters long or less. | Yes*
+| type | String | Type of the boat | Type must only contain alphanumeric characters, spaces, and dashes. It must start with an alphanumeric character. Additionally, it must be 20 characters long or less. | Yes*
 | length | Integer | Length of the boat | Length must be between 10 and 1000 feet. | Yes*
 
 \* At least one required attribute must be present, but it is not necessary for all three attributes to be present.
@@ -196,8 +196,8 @@ Similar in functionality to the PATCH request, with a couple of differences:
 #### Request Attributes
 | Name | Type | Description | Constraint | Required?
 |--|--|--|--|--
-| name | String | Name of the  boat | Name must only contain alphanumeric characters, spaces, and dashes. It must start with an alphanumeric character. | Yes
-| type | String | Type of the boat | Type must only contain alphanumeric characters, spaces, and dashes. It must start with an alphanumeric character. | Yes
+| name | String | Name of the  boat | Name must only contain alphanumeric characters, spaces, and dashes. It must start with an alphanumeric character. Additionally, it must be 20 characters long or less. | Yes
+| type | String | Type of the boat | Type must only contain alphanumeric characters, spaces, and dashes. It must start with an alphanumeric character. Additionally, it must be 20 characters long or less. | Yes
 | length | Integer | Length of the boat | Length must be between 10 and 1000 feet. | Yes
 
 Unlike the PATCH request, all three required attributes must be present.
