@@ -12,11 +12,16 @@
 # below:
 .git
 .gitignore
+
+# Documentation files
 *.pdf
-test*
-*.zip
 *.html
 *.md
+*.odt
+
+# Output files
+test*
+*.zip
 
 # Node.js dependencies:
 node_modules/

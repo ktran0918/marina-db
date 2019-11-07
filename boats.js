@@ -1,6 +1,7 @@
 const express = require('express');
 const bodyParser = require('body-parser');
 const router = express.Router();
+const jsonToHtml = require('json-to-html');
 const ds = require('./datastore');
 const url = require('url');
 
@@ -16,6 +17,13 @@ router.use(bodyParser.json());
 
 /* ------------- Begin guest Model Functions ------------- */
 async function post_boat(name, type, length) {
+  if (!(await name_is_unique(name))) {
+    return {
+      statusCode: 403,
+      message: 'A boat of the same name already exists'
+    }
+  }
+
   var key = datastore.key(BOAT);
   const new_boat = {
     "name": name,
@@ -53,8 +61,10 @@ async function get_boats(req) {
 async function get_boat(id) {
   try {
     const key = datastore.key([BOAT, parseInt(id, 10)]);
-    let boat = await datastore.get(key);
-    return boat;
+    let boats = await datastore.get(key);
+    if (boats && boats[0]) {
+      return boats[0];
+    }
   } catch (error) {
     throw error;
   }
@@ -71,21 +81,43 @@ async function get_boat_loads(boat_id) {
   }
 }
 
+async function name_is_unique(name, id) {
+  let query = datastore.createQuery(BOAT);
+  let entities = await datastore.runQuery(query);
+  let boats = entities[0];
+
+  let existing_name = boats.find(boat => {
+    if (boat.name == name && id != boat[Datastore.KEY].id) {
+      return true;
+    };
+  });
+  return existing_name ? false : true;
+}
+
 async function edit_boat(id, name, type, length) {
   const key = datastore.key([BOAT, parseInt(id, 10)]);
   let boats = await datastore.get(key);
-  if (!boats || !boats[0]) return false;
-  const boat = {
-    "name": name,
-    "type": type,
-    "length": length
-  };
+  if (!boats || !boats[0]) return null;
+
+  if (name) {
+    if (!(await name_is_unique(name, id))) {
+      return {
+        statusCode: 403,
+        message: 'A boat of the same name already exists'
+      }
+    }
+  }
+
+  let boat = boats[0];
+  boat.name = name || boat.name;
+  boat.type = type || boat.type;
+  boat.length = length || boat.length;
   try {
     await datastore.save({
       "key": key,
       "data": boat
     });
-    return true;
+    return boat;
   } catch (error) {
     throw error;
   }
@@ -101,16 +133,18 @@ async function delete_boat(id) {
 
   let boat = boats[0];
   try {
-    for (let i = 0; i < boat.loads.length; i++) {
-      let load_id = boat.loads[i].id;
-      const load_key = datastore.key([LOAD, parseInt(load_id, 10)]);
-      let loads = await datastore.get(load_key);
-      let load = loads[0];
-      load.carrier = {};
-      await datastore.save({
-        "key": load_key,
-        "data": load
-      });
+    if (boat.loads) {
+      for (let i = 0; i < boat.loads.length; i++) {
+        let load_id = boat.loads[i].id;
+        const load_key = datastore.key([LOAD, parseInt(load_id, 10)]);
+        let loads = await datastore.get(load_key);
+        let load = loads[0];
+        load.carrier = {};
+        await datastore.save({
+          "key": load_key,
+          "data": load
+        });
+      }
     }
   } catch (error) {
     throw error;
@@ -267,9 +301,8 @@ router.get('/', async function (req, res) {
 router.get('/:boat_id', async function (req, res) {
   try {
     let boat_id = req.params.boat_id;
-    let boats = await get_boat(boat_id);
-    if (boats && boats[0]) {
-      let boat = boats[0];
+    let boat = await get_boat(boat_id);
+    if (boat) {
       boat.id = boat_id;
       boat.self = url.format({
         protocol: 'https',
@@ -286,7 +319,16 @@ router.get('/:boat_id', async function (req, res) {
         });
       }
 
-      res.status(200).json(boat);
+      const accepts = req.accepts(['application/json', 'text/html']);
+      if (!accepts) {
+        res.status(406).send('Content type not acceptable');
+      } else if (accepts == 'application/json') {
+        res.status(200).json(boat);
+      } else if (accepts == 'text/html') {
+        res.status(200).send(jsonToHtml(boat));
+      } else {
+        res.status(500).send('Content type cannot be read for unknown reasons');
+      }
     }
     else {
       res.status(404).send({
@@ -322,24 +364,52 @@ router.get('/:boat_id/loads', async function (req, res) {
 });
 
 router.post('/', async function (req, res) {
+  let invalid_attributes = Object.keys(req.body).filter(attribute => {
+    if (attribute != 'name' && attribute != 'type' && attribute != 'length') {
+      return true;
+    }
+  });
+  if (invalid_attributes.length > 0) {
+    res.status(403).send({
+      "Error": "The request object contains attributes other than name, type, and length"
+    });
+    return;
+  }
+
   let name = req.body.name;
   let type = req.body.type;
   let length = req.body.length;
 
+  if (req.get('content-type') != 'application/json') {
+    res.status(415).send({
+      "Error": "Server only accepts application/json data"
+    });
+    return;
+  }
+
   if (name && type && length) {
     try {
-      let key = await post_boat(req.body.name, req.body.type, req.body.length);
-      res.status(201).send({
-        "id": key.id,
-        "name": name,
-        "type": type,
-        "length": length,
-        "self": url.format({
-          protocol: 'https',
-          hostname: req.get('host'),
-          pathname: req.baseUrl + '/' + key.id
-        })
-      });
+      let result = await post_boat(req.body.name, req.body.type, req.body.length);
+
+      if (!result.statusCode) {
+        let key = result;
+        res.set('Content', 'application/json');
+        res.status(201).send({
+          "id": key.id,
+          "name": name,
+          "type": type,
+          "length": length,
+          "self": url.format({
+            protocol: 'https',
+            hostname: req.get('host'),
+            pathname: req.baseUrl + '/' + key.id
+          })
+        });
+      } else {
+        res.status(result.statusCode).send({
+          "Error": result.message
+        });
+      }
     } catch (error) {
       res.status(500).send();
       console.error(error);
@@ -350,26 +420,45 @@ router.post('/', async function (req, res) {
 });
 
 router.patch('/:boat_id', async function (req, res) {
+  let invalid_attributes = Object.keys(req.body).filter(attribute => {
+    if (attribute != 'name' && attribute != 'type' && attribute != 'length') {
+      return true;
+    }
+  });
+  if (invalid_attributes.length > 0) {
+    res.status(403).send({
+      "Error": "The request object contains attributes other than name, type, and length"
+    });
+  }
+
   let boat_id = req.params.boat_id;
   let name = req.body.name;
   let type = req.body.type;
   let length = req.body.length;
 
-  if (name && type && length) {
+  if (name || type || length) {
     try {
-      let result = await edit_boat(boat_id, name, type, length)
+      let result = await edit_boat(boat_id, name, type, length);
       if (result) {
-        res.status(200).send({
-          "id": boat_id,
-          "name": name,
-          "type": type,
-          "length": length,
-          "self": url.format({
-            protocol: 'https',
-            hostname: req.get('host'),
-            pathname: req.baseUrl
-          })
-        });
+        if (!result.statusCode) {
+          let boat = result;
+          res.set('Content', 'application/json');
+          res.status(200).send({
+            "id": boat_id,
+            "name": boat.name,
+            "type": boat.type,
+            "length": length,
+            "self": url.format({
+              protocol: 'https',
+              hostname: req.get('host'),
+              pathname: req.originalUrl
+            })
+          });
+        } else {
+          res.status(result.statusCode).send({
+            "Error": result.message
+          });
+        }
       } else {
         res.status(404).send({
           "Error": "No boat with this boat_id exists"
@@ -383,6 +472,56 @@ router.patch('/:boat_id', async function (req, res) {
     res.status(400).send({
       "Error": "The request object is missing at least one of the required attributes"
     })
+  }
+});
+
+router.put('/:boat_id', async function (req, res) {
+  let invalid_attributes = Object.keys(req.body).filter(attribute => {
+    if (attribute != 'name' && attribute != 'type' && attribute != 'length') {
+      return true;
+    }
+  });
+  if (invalid_attributes.length > 0) {
+    res.status(403).send({
+      "Error": "The request object contains attributes other than name, type, and length"
+    });
+  }
+
+  let boat_id = req.params.boat_id;
+  let name = req.body.name;
+  let type = req.body.type;
+  let length = req.body.length;
+
+  if (name && type && length) {
+    try {
+      let result = await edit_boat(boat_id, name, type, length)
+      if (result) {
+        if (!result.statusCode) {
+          res.set('Content', 'application/json');
+          res.setHeader('Location', url.format({
+            protocol: 'https',
+            hostname: req.get('host'),
+            pathname: req.originalUrl
+          }));
+          res.status(303).send();
+        } else {
+          res.status(result.statusCode).send({
+            "Error": result.message
+          });
+        }
+      } else {
+        res.status(404).send({
+          "Error": "No boat with this boat_id exists"
+        });
+      }
+    } catch (error) {
+      console.log(error);
+      res.status(500).send();
+    }
+  } else {
+    res.status(400).send({
+      "Error": "The request object is missing all the required attributes: name, type, and length"
+    });
   }
 });
 
