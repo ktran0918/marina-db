@@ -482,7 +482,7 @@ router.patch('/:boat_id', async function (req, res) {
   }
 
   if (length != undefined) {
-    if (isNaN(length) || length > 1000 || length < 10) {
+    if (isNaN(length) || length >= 1000 || length <= 10) {
       res.status(403).send({
         "Error": "The length is invalid"
       });
@@ -561,7 +561,7 @@ router.put('/:boat_id', async function (req, res) {
       return;
     }
 
-    if (isNaN(length) || length > 1000 || length < 10) {
+    if (isNaN(length) || length >= 1000 || length <= 10) {
       res.status(403).send({
         "Error": "The length is invalid"
       });

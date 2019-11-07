@@ -27,4 +27,4 @@ test*
 node_modules/
 
 # Postman
-postman-tests/
+*postman-tests/
