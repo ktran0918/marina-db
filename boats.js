@@ -321,7 +321,9 @@ router.get('/:boat_id', async function (req, res) {
 
       const accepts = req.accepts(['application/json', 'text/html']);
       if (!accepts) {
-        res.status(406).send('Content type not acceptable');
+        res.status(406).send({
+          "Error": "Content type not acceptable"
+        });
       } else if (accepts == 'application/json') {
         res.status(200).json(boat);
       } else if (accepts == 'text/html') {
@@ -387,7 +389,28 @@ router.post('/', async function (req, res) {
     return;
   }
 
-  if (name && type && length) {
+  if (name && type && length != undefined) {
+    if (!name.match(/^[a-z0-9 \-]+$/i) || name.length > 20) {
+      res.status(403).send({
+        "Error": "The name is invalid"
+      });
+      return;
+    }
+
+    if (!type.match(/^[a-z0-9 \-]+$/i) || type.length > 20) {
+      res.status(403).send({
+        "Error": "The type is invalid"
+      });
+      return;
+    }
+
+    if (isNaN(length) || length > 1000 || length < 10) {
+      res.status(403).send({
+        "Error": "The length is invalid"
+      });
+      return;
+    }
+
     try {
       let result = await post_boat(req.body.name, req.body.type, req.body.length);
 
@@ -419,6 +442,11 @@ router.post('/', async function (req, res) {
   });
 });
 
+router.put('/', function (req, res) {
+  res.set('Accept', 'GET, POST');
+  res.status(405).end();
+});
+
 router.patch('/:boat_id', async function (req, res) {
   let invalid_attributes = Object.keys(req.body).filter(attribute => {
     if (attribute != 'name' && attribute != 'type' && attribute != 'length') {
@@ -436,7 +464,33 @@ router.patch('/:boat_id', async function (req, res) {
   let type = req.body.type;
   let length = req.body.length;
 
-  if (name || type || length) {
+  if (name) {
+    if (!name.match(/^[a-z0-9 \-]+$/i) || name.length > 20) {
+      res.status(403).send({
+        "Error": "The name is invalid"
+      });
+      return;
+    }
+  }
+  if (type) {
+    if (!type.match(/^[a-z0-9 \-]+$/i) || type.length > 20) {
+      res.status(403).send({
+        "Error": "The type is invalid"
+      });
+      return;
+    }
+  }
+
+  if (length != undefined) {
+    if (isNaN(length) || length > 1000 || length < 10) {
+      res.status(403).send({
+        "Error": "The length is invalid"
+      });
+      return;
+    }
+  }
+
+  if (name || type || length != undefined) {
     try {
       let result = await edit_boat(boat_id, name, type, length);
       if (result) {
@@ -492,7 +546,28 @@ router.put('/:boat_id', async function (req, res) {
   let type = req.body.type;
   let length = req.body.length;
 
-  if (name && type && length) {
+  if (name && type && length != undefined) {
+    if (!name.match(/^[a-z0-9 \-]+$/i) || name.length > 20) {
+      res.status(403).send({
+        "Error": "The name is invalid"
+      });
+      return;
+    }
+
+    if (!type.match(/^[a-z0-9 \-]+$/i) || type.length > 20) {
+      res.status(403).send({
+        "Error": "The type is invalid"
+      });
+      return;
+    }
+
+    if (isNaN(length) || length > 1000 || length < 10) {
+      res.status(403).send({
+        "Error": "The length is invalid"
+      });
+      return;
+    }
+
     try {
       let result = await edit_boat(boat_id, name, type, length)
       if (result) {
@@ -549,6 +624,11 @@ router.put('/:boat_id/loads/:load_id', async function (req, res) {
     res.status(500).end();
     console.error(error);
   }
+});
+
+router.delete('/', function (req, res) {
+  res.set('Accept', 'GET, POST');
+  res.status(405).end();
 });
 
 router.delete('/:boat_id/loads/:load_id', async function (req, res) {
