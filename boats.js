@@ -322,7 +322,7 @@ router.get('/:boat_id', async function (req, res) {
       const accepts = req.accepts(['application/json', 'text/html']);
       if (!accepts) {
         res.status(406).send({
-          "Error": "Content type not acceptable"
+          "Error": "The requested content type is not available"
         });
       } else if (accepts == 'application/json') {
         res.status(200).json(boat);
@@ -390,21 +390,21 @@ router.post('/', async function (req, res) {
   }
 
   if (name && type && length != undefined) {
-    if (!name.match(/^[a-z0-9 \-]+$/i) || name.length > 20) {
+    if (!name.match(/^[a-z0-9][a-z0-9 \-]+$/i) || name.length > 20) {
       res.status(403).send({
         "Error": "The name is invalid"
       });
       return;
     }
 
-    if (!type.match(/^[a-z0-9 \-]+$/i) || type.length > 20) {
+    if (!type.match(/^[a-z0-9][a-z0-9 \-]+$/i) || type.length > 20) {
       res.status(403).send({
         "Error": "The type is invalid"
       });
       return;
     }
 
-    if (isNaN(length) || length > 1000 || length < 10) {
+    if (isNaN(length) || length >= 1000 || length <= 10) {
       res.status(403).send({
         "Error": "The length is invalid"
       });
@@ -465,7 +465,7 @@ router.patch('/:boat_id', async function (req, res) {
   let length = req.body.length;
 
   if (name) {
-    if (!name.match(/^[a-z0-9 \-]+$/i) || name.length > 20) {
+    if (!name.match(/^[a-z0-9][a-z0-9 \-]+$/i) || name.length > 20) {
       res.status(403).send({
         "Error": "The name is invalid"
       });
@@ -473,7 +473,7 @@ router.patch('/:boat_id', async function (req, res) {
     }
   }
   if (type) {
-    if (!type.match(/^[a-z0-9 \-]+$/i) || type.length > 20) {
+    if (!type.match(/^[a-z0-9][a-z0-9 \-]+$/i) || type.length > 20) {
       res.status(403).send({
         "Error": "The type is invalid"
       });
@@ -524,7 +524,7 @@ router.patch('/:boat_id', async function (req, res) {
     }
   } else {
     res.status(400).send({
-      "Error": "The request object is missing at least one of the required attributes"
+      "Error": "The request object is missing a required attribute"
     })
   }
 });
@@ -547,14 +547,14 @@ router.put('/:boat_id', async function (req, res) {
   let length = req.body.length;
 
   if (name && type && length != undefined) {
-    if (!name.match(/^[a-z0-9 \-]+$/i) || name.length > 20) {
+    if (!name.match(/^[a-z0-9][a-z0-9 \-]+$/i) || name.length > 20) {
       res.status(403).send({
         "Error": "The name is invalid"
       });
       return;
     }
 
-    if (!type.match(/^[a-z0-9 \-]+$/i) || type.length > 20) {
+    if (!type.match(/^[a-z0-9][a-z0-9 \-]+$/i) || type.length > 20) {
       res.status(403).send({
         "Error": "The type is invalid"
       });
@@ -595,7 +595,7 @@ router.put('/:boat_id', async function (req, res) {
     }
   } else {
     res.status(400).send({
-      "Error": "The request object is missing all the required attributes: name, type, and length"
+      "Error": "The request object is missing at least one of the required attributes"
     });
   }
 });
