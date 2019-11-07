@@ -35,13 +35,13 @@ None
 | Outcome | Status Code | Notes 
 |--|--|--
 | Success | 201 Created |
-| Failure | 403 Forbidden | The request object contains attributes other than name, type, and length (e.g. color, manufacturer).
-| Failure | 403 Forbidden | The name is invalid.
-| Failure | 403 Forbidden | The type is invalid.
-| Failure | 403 Forbidden | The length is invalid.
+| Failure | 400 Bad Request | The request object contains attributes other than name, type, and length (e.g. color, manufacturer).
+| Failure | 400 Bad Request | The name is invalid.
+| Failure | 400 Bad Request | The type is invalid.
+| Failure | 400 Bad Request | The length is invalid.
+| Failure | 400 Bad Request | The request object is missing at least one of the required attributes.
 | Failure | 403 Forbidden | A boat of the same name already exists.
 | Failure | 415 Unsupported Media Type | Request body is not in JSON format.
-| Failure | 400 Bad Request | The request object is missing at least one of the required attributes.
 
 #### Response Examples
 Success - 201 Created
@@ -147,13 +147,14 @@ Failure - 406 Not Acceptable
 | Outcome | Status Code | Notes 
 |--|--|--
 | Success | 200 OK |
-| Failure | 403 Forbidden | The request object contains attributes other than name, type, and length (e.g. color, manufacturer)
-| Failure | 403 Forbidden | The name is invalid.
-| Failure | 403 Forbidden | The type is invalid.
-| Failure | 403 Forbidden | The length is invalid. 
-| Failure | 415 Unsupported Media Type | Request body is not in JSON format
+| Failure | 400 Bad Request | The request object contains attributes other than name, type, and length (e.g. color, manufacturer)
+| Failure | 400 Bad Request | The name is invalid.
+| Failure | 400 Bad Request | The type is invalid.
+| Failure | 400 Bad Request | The length is invalid. 
 | Failure | 400 Bad Request | The request object is missing a required attribute.
+| Failure | 415 Unsupported Media Type | Request body is not in JSON format.
 | Failure | 404 Not Found | No boat with this boat_id exists.
+| Failure | 403 Forbidden | A boat of the same name already exists.
 
 #### Response Examples
 Success - 200 OK
@@ -218,13 +219,14 @@ Unlike the PATCH request, all three required attributes must be present.
 | Outcome | Status Code | Notes 
 |--|--|--
 | Success | 200 OK |
-| Failure | 403 Forbidden | The request object contains attributes other than name, type, and length (e.g. color, manufacturer)
-| Failure | 403 Forbidden | The name is invalid.
-| Failure | 403 Forbidden | The type is invalid.
-| Failure | 403 Forbidden | The length is invalid. 
-| Failure | 415 Unsupported Media Type | Request body is not in JSON format
+| Failure | 400 Bad Request | The request object contains attributes other than name, type, and length (e.g. color, manufacturer)
+| Failure | 400 Bad Request | The name is invalid.
+| Failure | 400 Bad Request | The type is invalid.
+| Failure | 400 Bad Request | The length is invalid. 
 | Failure | 400 Bad Request | The request object is missing at least one of the required attributes.
+| Failure | 415 Unsupported Media Type | Request body is not in JSON format.
 | Failure | 404 Not Found | No boat with this boat_id exists.
+| Failure | 403 Forbidden | A boat of the same name already exists.
 
 #### Response Examples
 Success - 200 OK

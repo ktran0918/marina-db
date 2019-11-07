@@ -372,7 +372,7 @@ router.post('/', async function (req, res) {
     }
   });
   if (invalid_attributes.length > 0) {
-    res.status(403).send({
+    res.status(400).send({
       "Error": "The request object contains attributes other than name, type, and length"
     });
     return;
@@ -391,21 +391,21 @@ router.post('/', async function (req, res) {
 
   if (name && type && length != undefined) {
     if (!name.match(/^[a-z0-9][a-z0-9 \-]+$/i) || name.length > 20) {
-      res.status(403).send({
+      res.status(400).send({
         "Error": "The name is invalid"
       });
       return;
     }
 
     if (!type.match(/^[a-z0-9][a-z0-9 \-]+$/i) || type.length > 20) {
-      res.status(403).send({
+      res.status(400).send({
         "Error": "The type is invalid"
       });
       return;
     }
 
     if (isNaN(length) || length >= 1000 || length <= 10) {
-      res.status(403).send({
+      res.status(400).send({
         "Error": "The length is invalid"
       });
       return;
@@ -454,7 +454,7 @@ router.patch('/:boat_id', async function (req, res) {
     }
   });
   if (invalid_attributes.length > 0) {
-    res.status(403).send({
+    res.status(400).send({
       "Error": "The request object contains attributes other than name, type, and length"
     });
   }
@@ -466,7 +466,7 @@ router.patch('/:boat_id', async function (req, res) {
 
   if (name) {
     if (!name.match(/^[a-z0-9][a-z0-9 \-]+$/i) || name.length > 20) {
-      res.status(403).send({
+      res.status(400).send({
         "Error": "The name is invalid"
       });
       return;
@@ -474,7 +474,7 @@ router.patch('/:boat_id', async function (req, res) {
   }
   if (type) {
     if (!type.match(/^[a-z0-9][a-z0-9 \-]+$/i) || type.length > 20) {
-      res.status(403).send({
+      res.status(400).send({
         "Error": "The type is invalid"
       });
       return;
@@ -483,7 +483,7 @@ router.patch('/:boat_id', async function (req, res) {
 
   if (length != undefined) {
     if (isNaN(length) || length >= 1000 || length <= 10) {
-      res.status(403).send({
+      res.status(400).send({
         "Error": "The length is invalid"
       });
       return;
@@ -536,7 +536,7 @@ router.put('/:boat_id', async function (req, res) {
     }
   });
   if (invalid_attributes.length > 0) {
-    res.status(403).send({
+    res.status(400).send({
       "Error": "The request object contains attributes other than name, type, and length"
     });
   }
@@ -548,21 +548,21 @@ router.put('/:boat_id', async function (req, res) {
 
   if (name && type && length != undefined) {
     if (!name.match(/^[a-z0-9][a-z0-9 \-]+$/i) || name.length > 20) {
-      res.status(403).send({
+      res.status(400).send({
         "Error": "The name is invalid"
       });
       return;
     }
 
     if (!type.match(/^[a-z0-9][a-z0-9 \-]+$/i) || type.length > 20) {
-      res.status(403).send({
+      res.status(400).send({
         "Error": "The type is invalid"
       });
       return;
     }
 
     if (isNaN(length) || length >= 1000 || length <= 10) {
-      res.status(403).send({
+      res.status(400).send({
         "Error": "The length is invalid"
       });
       return;
