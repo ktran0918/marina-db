@@ -366,6 +366,13 @@ router.get('/:boat_id/loads', async function (req, res) {
 });
 
 router.post('/', async function (req, res) {
+  if (req.get('content-type') != 'application/json') {
+    res.status(415).send({
+      "Error": "Server only accepts application/json data"
+    });
+    return;
+  }
+
   let invalid_attributes = Object.keys(req.body).filter(attribute => {
     if (attribute != 'name' && attribute != 'type' && attribute != 'length') {
       return true;
@@ -381,13 +388,6 @@ router.post('/', async function (req, res) {
   let name = req.body.name;
   let type = req.body.type;
   let length = req.body.length;
-
-  if (req.get('content-type') != 'application/json') {
-    res.status(415).send({
-      "Error": "Server only accepts application/json data"
-    });
-    return;
-  }
 
   if (name && type && length != undefined) {
     if (!name.match(/^[a-z0-9][a-z0-9 \-]+$/i) || name.length > 20) {
@@ -448,6 +448,13 @@ router.put('/', function (req, res) {
 });
 
 router.patch('/:boat_id', async function (req, res) {
+  if (req.get('content-type') != 'application/json') {
+    res.status(415).send({
+      "Error": "Server only accepts application/json data"
+    });
+    return;
+  }
+
   let invalid_attributes = Object.keys(req.body).filter(attribute => {
     if (attribute != 'name' && attribute != 'type' && attribute != 'length') {
       return true;
@@ -530,6 +537,13 @@ router.patch('/:boat_id', async function (req, res) {
 });
 
 router.put('/:boat_id', async function (req, res) {
+  if (req.get('content-type') != 'application/json') {
+    res.status(415).send({
+      "Error": "Server only accepts application/json data"
+    });
+    return;
+  }
+
   let invalid_attributes = Object.keys(req.body).filter(attribute => {
     if (attribute != 'name' && attribute != 'type' && attribute != 'length') {
       return true;
