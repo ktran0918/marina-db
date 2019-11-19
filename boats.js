@@ -1,22 +1,39 @@
 const express = require('express');
 const bodyParser = require('body-parser');
-const router = express.Router();
+const { Datastore } = require('@google-cloud/datastore');
+const { OAuth2Client } = require('google-auth-library');
 const jsonToHtml = require('json-to-html');
-const ds = require('./datastore');
 const url = require('url');
 
-const { Datastore } = require('@google-cloud/datastore');
+const ds = require('./datastore');
 
 const datastore = ds.datastore;
+const CLIENT_ID = '961976822144-5fkk08685mcgukj5v2kmmucn6hofcn65.apps.googleusercontent.com'
+const client = new OAuth2Client(CLIENT_ID);
 
 const BOAT = "Boat";
 const SLIP = "Slip";
 const LOAD = "Load";
 
+const router = express.Router();
 router.use(bodyParser.json());
 
-/* ------------- Begin guest Model Functions ------------- */
-async function post_boat(name, type, length) {
+
+/* ------------- Begin boat Model Functions ------------- */
+async function verify(token) {
+  const ticket = await client.verifyIdToken({
+    idToken: token,
+    audience: CLIENT_ID,
+  });
+  const payload = ticket.getPayload();
+  const userid = payload['sub'];
+  // If request specified a G Suite domain:
+  //const domain = payload['hd'];
+
+  return userid;
+}
+
+async function post_boat(name, type, length, userid) {
   if (!(await name_is_unique(name))) {
     return {
       statusCode: 403,
@@ -29,7 +46,8 @@ async function post_boat(name, type, length) {
     "name": name,
     "type": type,
     "length": length,
-    "loads": []
+    "loads": [],
+    "owner": userid
   };
   try {
     await datastore.save({ "key": key, "data": new_boat });
@@ -366,6 +384,15 @@ router.get('/:boat_id/loads', async function (req, res) {
 });
 
 router.post('/', async function (req, res) {
+  let userid;
+  try {
+    let jwt = req.headers.authorization.split(' ')[1];
+    userid = await verify(jwt);
+  } catch (err) {
+    res.status(401).end();
+    console.error(err);
+    return;
+  }
   if (req.get('content-type') != 'application/json') {
     res.status(415).send({
       "Error": "Server only accepts application/json data"
@@ -412,7 +439,7 @@ router.post('/', async function (req, res) {
     }
 
     try {
-      let result = await post_boat(req.body.name, req.body.type, req.body.length);
+      let result = await post_boat(name, type, length, userid);
 
       if (!result.statusCode) {
         let key = result;
@@ -422,6 +449,7 @@ router.post('/', async function (req, res) {
           "name": name,
           "type": type,
           "length": length,
+          "owner": userid,
           "self": url.format({
             protocol: 'https',
             hostname: req.get('host'),
