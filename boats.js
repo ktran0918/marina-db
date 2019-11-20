@@ -1,15 +1,13 @@
 const express = require('express');
 const bodyParser = require('body-parser');
 const { Datastore } = require('@google-cloud/datastore');
-const { OAuth2Client } = require('google-auth-library');
 const jsonToHtml = require('json-to-html');
 const url = require('url');
 
+const oauth = require('./oauth');
 const ds = require('./datastore');
 
 const datastore = ds.datastore;
-const CLIENT_ID = '961976822144-5fkk08685mcgukj5v2kmmucn6hofcn65.apps.googleusercontent.com'
-const client = new OAuth2Client(CLIENT_ID);
 
 const BOAT = "Boat";
 const SLIP = "Slip";
@@ -20,19 +18,6 @@ router.use(bodyParser.json());
 
 
 /* ------------- Begin boat Model Functions ------------- */
-async function verify(token) {
-  const ticket = await client.verifyIdToken({
-    idToken: token,
-    audience: CLIENT_ID,
-  });
-  const payload = ticket.getPayload();
-  const userid = payload['sub'];
-  // If request specified a G Suite domain:
-  //const domain = payload['hd'];
-
-  return userid;
-}
-
 async function post_boat(name, type, length, userid) {
   if (!(await name_is_unique(name))) {
     return {
@@ -141,16 +126,30 @@ async function edit_boat(id, name, type, length) {
   }
 }
 
-async function delete_boat(id) {
+async function delete_boat(id, userid) {
+  let result = {};
+  let bad_id_error = {
+    status: 403,
+    message: 'Boat does not exist'
+  };
+  let boats;
   let id_as_int = parseInt(id, 10);
-  if (!id_as_int || isNaN(id_as_int)) return false;
+  if (!id_as_int || isNaN(id_as_int)) return bad_id_error;
 
   const boat_key = datastore.key([BOAT, parseInt(id, 10)]);
-  let boats = await datastore.get(boat_key);
-  if (!boats || !boats[0]) return false;
+  boats = await datastore.get(boat_key);
 
   let boat = boats[0];
   try {
+    if (!boat) {
+      return bad_id_error;
+    }
+    if (boat.owner != userid) {
+      result.status = 403;
+      result.message = 'Cannot delete boat owned by another user'
+      return result;
+    }
+
     if (boat.loads) {
       for (let i = 0; i < boat.loads.length; i++) {
         let load_id = boat.loads[i].id;
@@ -178,7 +177,8 @@ async function delete_boat(id) {
       }
     }
     await datastore.delete(boat_key);
-    return true;
+    result.status = 204;
+    return result;
   } catch (error) {
     throw error;
   }
@@ -361,6 +361,8 @@ router.get('/:boat_id', async function (req, res) {
   }
 });
 
+router.get('/')
+
 router.get('/:boat_id/loads', async function (req, res) {
   try {
     let boat_id = req.params.boat_id;
@@ -387,7 +389,7 @@ router.post('/', async function (req, res) {
   let userid;
   try {
     let jwt = req.headers.authorization.split(' ')[1];
-    userid = await verify(jwt);
+    userid = await oauth.verify(jwt);
   } catch (err) {
     res.status(401).end();
     console.error(err);
@@ -695,15 +697,19 @@ router.delete('/:boat_id/loads/:load_id', async function (req, res) {
 });
 
 router.delete('/:boat_id', async function (req, res) {
+  let userid;
   try {
-    let result = await delete_boat(req.params.boat_id);
-    if (result) {
-      res.status(204).end();
-    } else {
-      res.status(404).send({
-        "Error": "No boat with this boat_id exists"
-      });
-    }
+    let jwt = req.headers.authorization.split(' ')[1];
+    userid = await oauth.verify(jwt);
+  } catch (err) {
+    res.status(401).end();
+    console.error(err);
+    return;
+  }
+
+  try {
+    let result = await delete_boat(req.params.boat_id, userid);
+    res.status(result.status).send(result.message);
   } catch (error) {
     res.status(500).end();
     console.log(error);

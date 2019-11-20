@@ -23,7 +23,7 @@ router.use(bodyParser.urlencoded({ extended: true }));
 // });
 
 router.get('/', async (req, res) => {
-  // state = randomstring.generate(16);
+  let state = randomstring.generate(16);
 
   const options = {
     uri: 'https://accounts.google.com/o/oauth2/v2/auth',
@@ -32,7 +32,7 @@ router.get('/', async (req, res) => {
       redirect_uri: 'https://marina-db.appspot.com/login/auth',
       scope: 'profile email',
       response_type: 'code',
-      // state: state,
+      state: state,
     },
   };
 
