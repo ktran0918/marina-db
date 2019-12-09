@@ -31,14 +31,17 @@ async function post_load(weight, content, delivery_date) {
 }
 
 async function get_loads(req) {
-  let query = datastore.createQuery(LOAD).limit(3);
+  let totalQuery = datastore.createQuery(LOAD);
+  let query = datastore.createQuery(LOAD).limit(5);
   let results = {};
   if (Object.keys(req.query).includes('cursor')) {
     query = query.start(req.query.cursor);
   }
   try {
+    let totalEntities = await datastore.runQuery(totalQuery);
     let entities = await datastore.runQuery(query);
     results.items = entities[0].map(ds.fromDatastore);
+    results.totalCount = totalEntities[0].length;
 
     if (entities[1].moreResults !== ds.Datastore.NO_MORE_RESULTS) {
       results.next = "https://" + req.get("host") + req.baseUrl + "?cursor=" + entities[1].endCursor;

@@ -43,20 +43,25 @@ async function post_boat(name, type, length, userid) {
 }
 
 async function get_boats(req) {
-  let query = datastore.createQuery(BOAT).limit(3);
+  let totalQuery = datastore.createQuery(BOAT);
+  let query = datastore.createQuery(BOAT).limit(5);
   let results = {};
-  if (Object.keys(req.query).includes('cursor')) {
+  if (req.query && req.query.cursor) {
     query = query.start(req.query.cursor);
   }
   try {
+    let totalEntities = await datastore.runQuery(totalQuery);
     let entities = await datastore.runQuery(query);
+    // console.log(entities);
     results.items = entities[0].map(ds.fromDatastore);
+    results.totalCount = totalEntities[0].length;;
 
     if (entities[1].moreResults !== ds.Datastore.NO_MORE_RESULTS) {
       results.next = "https://" + req.get("host") + req.baseUrl + "?cursor=" + entities[1].endCursor;
     }
     return results;
   } catch (error) {
+    // console.log('Error encountered');
     throw error;
   }
 }
@@ -97,7 +102,7 @@ async function name_is_unique(name, id) {
   return existing_name ? false : true;
 }
 
-async function edit_boat(id, name, type, length) {
+async function edit_boat(userid, id, name, type, length) {
   const key = datastore.key([BOAT, parseInt(id, 10)]);
   let boats = await datastore.get(key);
   if (!boats || !boats[0]) return null;
@@ -112,6 +117,14 @@ async function edit_boat(id, name, type, length) {
   }
 
   let boat = boats[0];
+  if (boat.owner != userid) {
+    // result.status = 403;
+    // result.message = 'Cannot edit boat owned by another user'
+    return {
+      statusCode: 403,
+      message: 'Cannot edit boat owned by another user'
+    };
+  }
   boat.name = name || boat.name;
   boat.type = type || boat.type;
   boat.length = length || boat.length;
@@ -337,15 +350,15 @@ router.get('/:boat_id', async function (req, res) {
         });
       }
 
-      const accepts = req.accepts(['application/json', 'text/html']);
+      const accepts = req.accepts(['application/json']);
       if (!accepts) {
         res.status(406).send({
           "Error": "The requested content type is not available"
         });
       } else if (accepts == 'application/json') {
         res.status(200).json(boat);
-      } else if (accepts == 'text/html') {
-        res.status(200).send(jsonToHtml(boat));
+        // } else if (accepts == 'text/html') {
+        //   res.status(200).send(jsonToHtml(boat));
       } else {
         res.status(500).send('Content type cannot be read for unknown reasons');
       }
@@ -527,9 +540,19 @@ router.patch('/:boat_id', async function (req, res) {
     }
   }
 
+  let userid;
+  try {
+    let jwt = req.headers.authorization.split(' ')[1];
+    userid = await oauth.verify(jwt);
+  } catch (err) {
+    res.status(401).end();
+    console.error(err);
+    return;
+  }
+
   if (name || type || length != undefined) {
     try {
-      let result = await edit_boat(boat_id, name, type, length);
+      let result = await edit_boat(userid, boat_id, name, type, length);
       if (result) {
         if (!result.statusCode) {
           let boat = result;
@@ -551,7 +574,7 @@ router.patch('/:boat_id', async function (req, res) {
           });
         }
       } else {
-        res.status(404).send({
+        res.status(403).send({
           "Error": "No boat with this boat_id exists"
         });
       }
@@ -612,8 +635,18 @@ router.put('/:boat_id', async function (req, res) {
       return;
     }
 
+    let userid;
     try {
-      let result = await edit_boat(boat_id, name, type, length)
+      let jwt = req.headers.authorization.split(' ')[1];
+      userid = await oauth.verify(jwt);
+    } catch (err) {
+      res.status(401).end();
+      console.error(err);
+      return;
+    }
+
+    try {
+      let result = await edit_boat(userid, boat_id, name, type, length)
       if (result) {
         if (!result.statusCode) {
           res.set('Content', 'application/json');
@@ -629,7 +662,7 @@ router.put('/:boat_id', async function (req, res) {
           });
         }
       } else {
-        res.status(404).send({
+        res.status(403).send({
           "Error": "No boat with this boat_id exists"
         });
       }

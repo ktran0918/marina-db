@@ -16,7 +16,6 @@
 # Documentation files
 documentation/
 *.pdf
-*.html
 *.md
 *.odt
 
