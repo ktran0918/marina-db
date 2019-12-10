@@ -54,7 +54,7 @@ async function get_boats(req) {
     let entities = await datastore.runQuery(query);
     // console.log(entities);
     results.items = entities[0].map(ds.fromDatastore);
-    results.totalCount = totalEntities[0].length;;
+    results.totalCount = totalEntities[0].length;
 
     if (entities[1].moreResults !== ds.Datastore.NO_MORE_RESULTS) {
       results.next = "https://" + req.get("host") + req.baseUrl + "?cursor=" + entities[1].endCursor;
@@ -111,7 +111,9 @@ async function edit_boat(userid, id, name, type, length) {
     if (!(await name_is_unique(name, id))) {
       return {
         statusCode: 403,
-        message: 'A boat of the same name already exists'
+        message: {
+          "Error": "A boat of the same name already exists"
+        }
       }
     }
   }
@@ -122,7 +124,9 @@ async function edit_boat(userid, id, name, type, length) {
     // result.message = 'Cannot edit boat owned by another user'
     return {
       statusCode: 403,
-      message: 'Cannot edit boat owned by another user'
+      message: {
+        "Error": "Cannot edit boat not owned by the user"
+      }
     };
   }
   boat.name = name || boat.name;
@@ -143,7 +147,9 @@ async function delete_boat(id, userid) {
   let result = {};
   let bad_id_error = {
     status: 403,
-    message: 'Boat does not exist'
+    message: {
+      "Error": "Cannot delete boat not owned by the user"
+    }
   };
   let boats;
   let id_as_int = parseInt(id, 10);
@@ -159,7 +165,9 @@ async function delete_boat(id, userid) {
     }
     if (boat.owner != userid) {
       result.status = 403;
-      result.message = 'Cannot delete boat owned by another user'
+      result.message = {
+        "Error": "Cannot delete boat not owned by the user"
+      };
       return result;
     }
 
@@ -302,6 +310,14 @@ async function remove_load_from_boat(load_id, boat_id) {
 
 /* ------------- Begin Controller Functions ------------- */
 router.get('/', async function (req, res) {
+  const accepts = req.accepts(['application/json']);
+  if (!accepts) {
+    res.status(406).send({
+      "Error": "The requested content type is not available"
+    });
+    return;
+  }
+
   try {
     let results = await get_boats(req);
     let boats = results.items;
@@ -456,6 +472,14 @@ router.post('/', async function (req, res) {
     try {
       let result = await post_boat(name, type, length, userid);
 
+      const accepts = req.accepts(['application/json']);
+      if (!accepts) {
+        res.status(406).send({
+          "Error": "The requested content type is not available"
+        });
+        return;
+      }
+
       if (!result.statusCode) {
         let key = result;
         res.set('Content', 'application/json');
@@ -491,6 +515,14 @@ router.put('/', function (req, res) {
 });
 
 router.patch('/:boat_id', async function (req, res) {
+  const accepts = req.accepts(['application/json']);
+  if (!accepts) {
+    res.status(406).send({
+      "Error": "The requested content type is not available"
+    });
+    return;
+  }
+
   if (req.get('content-type') != 'application/json') {
     res.status(415).send({
       "Error": "Server only accepts application/json data"
@@ -569,13 +601,11 @@ router.patch('/:boat_id', async function (req, res) {
             })
           });
         } else {
-          res.status(result.statusCode).send({
-            "Error": result.message
-          });
+          res.status(result.statusCode).send(result.message);
         }
       } else {
         res.status(403).send({
-          "Error": "No boat with this boat_id exists"
+          "Error": "Cannot edit boat not owned by the user"
         });
       }
     } catch (error) {
@@ -590,6 +620,14 @@ router.patch('/:boat_id', async function (req, res) {
 });
 
 router.put('/:boat_id', async function (req, res) {
+  const accepts = req.accepts(['application/json']);
+  if (!accepts) {
+    res.status(406).send({
+      "Error": "The requested content type is not available"
+    });
+    return;
+  }
+
   if (req.get('content-type') != 'application/json') {
     res.status(415).send({
       "Error": "Server only accepts application/json data"
@@ -649,21 +687,31 @@ router.put('/:boat_id', async function (req, res) {
       let result = await edit_boat(userid, boat_id, name, type, length)
       if (result) {
         if (!result.statusCode) {
+          let boat = result;
           res.set('Content', 'application/json');
           res.setHeader('Location', url.format({
             protocol: 'https',
             hostname: req.get('host'),
             pathname: req.originalUrl
           }));
-          res.status(303).send();
-        } else {
-          res.status(result.statusCode).send({
-            "Error": result.message
+
+          res.status(200).send({
+            "id": boat_id,
+            "name": boat.name,
+            "type": boat.type,
+            "length": length,
+            "self": url.format({
+              protocol: 'https',
+              hostname: req.get('host'),
+              pathname: req.originalUrl
+            })
           });
+        } else {
+          res.status(result.statusCode).send(result.message);
         }
       } else {
         res.status(403).send({
-          "Error": "No boat with this boat_id exists"
+          "Error": "Cannot edit boat not owned by the user"
         });
       }
     } catch (error) {

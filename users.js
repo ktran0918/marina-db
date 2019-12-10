@@ -85,20 +85,43 @@ async function get_user_boats(req) {
 router.get('/:user_id/boats', async (req, res) => {
   let userid;
   try {
+    const accepts = req.accepts(['application/json']);
+    if (!accepts) {
+      res.status(406).send({
+        "Error": "The requested content type is not available"
+      });
+      return;
+      // } else if (accepts == 'application/json') {
+      //   res.status(200).json(boat);
+      // } else if (accepts == 'text/html') {
+      //   res.status(200).send(jsonToHtml(boat));
+    }
+    // else {
+    //   res.status(500).send('Content type cannot be read for unknown reasons');
+    // }
+  } catch (error) {
+    res.status(500).send('Content type cannot be read for unknown reasons');
+    console.error(error);
+    return;
+  }
+
+  try {
     let jwt = req.headers.authorization.split(' ')[1];
     userid = await oauth.verify(jwt);
     if (userid != req.params.user_id) {
-      throw new Error(`user_id provided does not match the user id in JWT`);
+      throw new Error(`user_id provided does not match the user_id in JWT`);
     }
   } catch (err) {
-    res.status(401).end();
+    res.status(401).send({
+      "Error": "Not authorized to view boats not owned by the user"
+    });
     console.error(err);
     return;
   }
 
   try {
     let user_boats = await get_user_boats(req, userid);
-    res.status(200).send(user_boats);
+    res.status(200).json(user_boats);
   } catch (err) {
     res.status(500).end();
     console.error(err);

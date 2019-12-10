@@ -99,6 +99,14 @@ async function delete_load(id) {
 
 /* ------------- Begin Controller Functions ------------- */
 router.post('/', async function (req, res) {
+  const accepts = req.accepts(['application/json']);
+  if (!accepts) {
+    res.status(406).send({
+      "Error": "The requested content type is not available"
+    });
+    return;
+  }
+
   let weight = req.body.weight;
   let content = req.body.content;
   let delivery_date = req.body.delivery_date;
@@ -128,6 +136,14 @@ router.post('/', async function (req, res) {
 });
 
 router.get('/:load_id', async function (req, res) {
+  const accepts = req.accepts(['application/json']);
+  if (!accepts) {
+    res.status(406).send({
+      "Error": "The requested content type is not available"
+    });
+    return;
+  }
+
   try {
     let load_id = req.params.load_id;
     let loads = await get_load(load_id);
@@ -162,6 +178,14 @@ router.get('/:load_id', async function (req, res) {
 });
 
 router.get('/', async function (req, res) {
+  const accepts = req.accepts(['application/json']);
+  if (!accepts) {
+    res.status(406).send({
+      "Error": "The requested content type is not available"
+    });
+    return;
+  }
+
   try {
     let results = await get_loads(req);
     let loads = results.items;

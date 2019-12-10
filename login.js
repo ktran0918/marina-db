@@ -106,12 +106,13 @@ router.get('/auth', async (req, res) => {
         };
         await datastore.save({ "key": key, "data": new_user });
 
-        new_user.jwt = id_token;
-        res.status(201).send(new_user);
-      } else {
-        existing_user.jwt = id_token;
-        res.status(200).send(existing_user);
+        // new_user.jwt = id_token;
+        // res.status(201).send(new_user);
+        // } else {
+        //   existing_user.jwt = id_token;
+        //   res.status(200).send(existing_user);
       }
+      res.status(200).send(id_token)
     } catch (err) {
       res.status(500).end();
       console.error(err);
