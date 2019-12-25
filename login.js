@@ -16,8 +16,8 @@ router.use(bodyParser.json());
 
 // var access_token;
 // var state;
-const client_id = '579423256180-lv1d1jv5utobfibghu578otdcooooafs.apps.googleusercontent.com';
-const client_secret = 'hEc5NfLvYOkCBMyQcNIsd2mB';
+const client_id = '';
+const client_secret = '';
 
 router.use(bodyParser.urlencoded({ extended: true }));
 
